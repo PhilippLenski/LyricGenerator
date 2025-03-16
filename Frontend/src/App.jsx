@@ -108,8 +108,6 @@ const App = () => {
                 {/* 📌 Linke Seite: Eingabeformular + Gedicht */}
                 <div className="bg-white shadow-md rounded-lg p-6">
                     <h2 className="text-xl font-semibold mb-4">Adresse eingeben</h2>
-
-                    {/* 📌 Adress-Eingabeform genau wie gewünscht angeordnet */}
                     <div className="grid grid-cols-2 gap-2">
                         <input
                             type="text"
