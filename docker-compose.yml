@@ -3,13 +3,20 @@ version: '3.8'
 services:
   backend:
     build: ./Backend
+    volumes:
+      - model_cache:/app/models  # 💾 Speichert das Modell dauerhaft
+    environment:
+      - HF_HOME=/app/
+      - MODEL_DIR="/app/models"
+      - DATABASE_URL=postgresql://myuser:mypassword@database:5432/mydatabase
+    restart: always
     ports:
       - "8000:8000"
     depends_on:
       database:
         condition: service_healthy  # 🚀 Warte auf Datenbank-Start
-    environment:
-      - DATABASE_URL=postgresql://myuser:mypassword@database:5432/mydatabase
+
+      
 
   database:
     image: postgres:15
@@ -35,3 +42,5 @@ services:
 
 volumes:
   pgdata:
+  model_cache:  
+

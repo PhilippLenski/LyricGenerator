@@ -13,13 +13,7 @@ RUN pip install --no-cache-dir huggingface_hub
 
 # 📌 Setze den Hugging Face API-Token (MUSS MANUELL EINGETRAGEN WERDEN!)
 ARG HF_TOKEN="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"
-ENV HF_HOME="/app/models"
 RUN huggingface-cli login --token $HF_TOKEN
-
-# 📌 Modell automatisch von Hugging Face herunterladen
-RUN mkdir -p /app/models && \
-    python -c "from huggingface_hub import snapshot_download; \
-               snapshot_download(repo_id='google/gemma-3-4b-it', cache_dir='/app/models')"
 
 # Kopiere nur requirements.txt zuerst, um Cache zu nutzen
 COPY requirements.txt .

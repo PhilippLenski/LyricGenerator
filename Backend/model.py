@@ -1,8 +1,17 @@
+import os
+from huggingface_hub import snapshot_download
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 # 📌 Modell und Tokenizer laden
-MODEL_PATH = "/app/models/google/gemma-3-4b-it"
+MODEL_PATH = "/app/models/models-google-gemma-3-4b-it/snapshots/dbd91baf64a0e591f4340ce8b66fd1dba9ab6bd"
+
+
+if not os.path.exists(MODEL_PATH):
+    print("📥 Modell wird heruntergeladen...")
+    snapshot_download(repo_id="google/gemma-3-4b-it", local_dir=MODEL_PATH)
+else:
+    print("✅ Modell bereits vorhanden.")
 
 # **Modell und Tokenizer von Hugging Face laden**
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)

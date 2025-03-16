@@ -1,3 +1,4 @@
+import requests
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -144,3 +145,15 @@ def update_poem(city: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"city": city, "updated_poem": poem.text}
+
+# 📌 Wikipedia-Link für eine Stadt abrufen
+@app.get("/wikipedia/{city}")
+def get_wikipedia_link(city: str):
+    url = f"https://de.wikipedia.org/api/rest_v1/page/summary/{city}"
+
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return {"title": data["title"], "link": data["content_urls"]["desktop"]["page"]}
+    else:
+        return {"error": "Kein Wikipedia-Eintrag gefunden"}
