@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./Backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy  # 🚀 Warte auf Datenbank-Start
+    environment:
+      - DATABASE_URL=postgresql://myuser:mypassword@database:5432/mydatabase
+
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:  # 🚀 Datenbank-Healthcheck
+      test: ["CMD", "pg_isready", "-U", "myuser", "-d", "mydatabase"]
+      interval: 5s
+      retries: 5
+
+  frontend:
+    build: ./Frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
