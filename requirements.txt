@@ -1,4 +1,3 @@
 fastapi
 uvicorn
 sqlite3
-llama-cpp-python

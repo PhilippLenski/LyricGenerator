@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { FaDownload, FaTrash, FaRoad, FaHome, FaCity, FaGlobe, FaExternalLinkAlt } from "react-icons/fa";
+import { FaDownload, FaTrash, FaRoad, FaHome, FaCity, FaGlobe, FaExternalLinkAlt,FaSpinner  } from "react-icons/fa";
 
 const App = () => {
     const [street, setStreet] = useState("");
@@ -8,9 +8,12 @@ const App = () => {
     const [city, setCity] = useState("");
     const [country, setCountry] = useState("");
     const [poem, setPoem] = useState("");
-    const [wikiLink, setWikiLink] = useState(""); // 🔹 Wikipedia-Link
+    const [wikiLink, setWikiLink] = useState(""); 
     const [addresses, setAddresses] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [models, setModels] = useState([]);
+    const [activeModel, setActiveModel] = useState(null);
+    const [switchingModel, setSwitchingModel] = useState(false);
 
     const fetchAddresses = async () => {
         try {
@@ -21,11 +24,39 @@ const App = () => {
         }
     };
 
+    const fetchModels = async () => {
+        try {
+            const response = await axios.get("http://localhost:8000/models/");
+            setModels(response.data);
+            if (response.data.length > 0) {
+                setActiveModel(response.data[0].name); 
+            }
+        } catch (error) {
+            console.error("Fehler beim Abrufen der Modelle!", error);
+        }
+    };
+
     useEffect(() => {
         fetchAddresses();
+        fetchModels();
     }, []);
 
-    // 📌 Wikipedia-Link abrufen
+    const handleModelSwitch = async (newModel) => {
+        if (model === newModel || switchingModel) return;
+        
+        setSwitchingModel(true);
+        try {
+            await axios.post("http://localhost:8000/switch_model/", { model_name: newModel });
+            setModel(newModel);
+        } catch (error) {
+            console.error("Fehler beim Wechseln des Modells!", error);
+        } finally {
+            setSwitchingModel(false); 
+        }
+
+    };
+
+ 
     const fetchWikipediaLink = async (city) => {
         try {
             const response = await axios.get(`http://localhost:8000/wikipedia/${city}`);
@@ -56,7 +87,7 @@ const App = () => {
             });
 
             setPoem(response.data.poem);
-            fetchWikipediaLink(city);  // 🔹 Wikipedia-Link abrufen
+            fetchWikipediaLink(city); 
             alert("Adresse erfolgreich gespeichert!");
             fetchAddresses();
         } catch (error) {
@@ -74,17 +105,61 @@ const App = () => {
         try {
             const response = await axios.get(`http://localhost:8000/address/${address.city}`);
             setPoem(response.data.poem);
-            fetchWikipediaLink(address.city);  // 🔹 Wikipedia-Link abrufen
+            fetchWikipediaLink(address.city);  
         } catch (error) {
             alert("Fehler beim Laden des Gedichts!");
         }
     };
 
+    const handleDeleteAddress = async (id) => {
+        try {
+            await axios.delete(`http://localhost:8000/address/${id}`);
+            setAddresses(addresses.filter(address => address.id !== id));
+        } catch (error) {
+            alert("Fehler beim Löschen der Adresse!");
+        }
+    };
+
+    const handleRegeneratePoem = async () => {
+        if (!city) return;
+        setLoading(true);
+        try {
+            const response = await axios.put(`http://localhost:8000/address/${city}`);
+            setPoem(response.data.updated_poem);
+        } catch (error) {
+            alert("Fehler beim erneuten Generieren des Gedichts!");
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-6"
              style={{ backgroundImage: "url('https://source.unsplash.com/1600x900/?city,night')", backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <h1 className="text-4xl font-bold mb-6 bg-gray-800 p-3 rounded-lg shadow-md">Städtereim-Generator 2.0</h1>
+            
+            {switchingModel && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70 z-50">
+                    <div className="flex flex-col items-center">
+                        <FaSpinner className="animate-spin text-white text-4xl" />
+                        <span className="mt-2 text-white text-lg">Wechsle Modell...</span>
+                    </div>
+                </div>
+            )}
+            <h1 className="text-4xl font-bold mb-6 bg-gray-800 p-3 rounded-lg shadow-md">Städtereim-Generator 4.0</h1>
 
+            <div className="flex items-center mb-6 bg-gray-800 p-2 rounded-full shadow-md">
+                {models.map((model) => (
+                    <button
+                        key={model.name}
+                        className={`px-4 py-2 mx-2 rounded-full transition-all duration-300 ${
+                            activeModel === model.name ? "bg-blue-500 text-white" : "bg-gray-300 text-black"
+                        }`}
+                        onClick={() => handleModelSwitch(model.name)}
+                        disabled={switchingModel}
+                    >
+                        {model.name}
+                    </button>
+                ))}
+            </div>
             <div className="grid grid-cols-2 gap-8 w-full max-w-6xl">
                 <div className="bg-gray-800 shadow-lg rounded-lg p-6 backdrop-blur-lg bg-opacity-80">
                     <h2 className="text-xl font-semibold mb-4">Adresse eingeben</h2>
@@ -108,12 +183,14 @@ const App = () => {
                             <input type="text" placeholder="Land" value={country} onChange={(e) => setCountry(e.target.value)} className="bg-transparent outline-none w-full text-white" />
                         </div>
                     </div>
-                    <button onClick={handleSaveAddress} className="w-full p-2 mt-4 rounded bg-blue-500 hover:bg-blue-600 text-white shadow-md">
+                    <button onClick={handleSaveAddress} disabled={loading} className={`w-full p-2 mt-4 rounded ${loading ? "bg-gray-500" : "bg-blue-500 hover:bg-blue-600"} bg-blue-500 hover:bg-blue-600 text-white shadow-md`}>
                         Adresse speichern
                     </button>
                     <h2 className="text-xl font-semibold mt-6">Gedicht</h2>
                     <textarea value={poem} readOnly className="w-full border p-2 mt-2 h-32 bg-gray-700 rounded text-white"></textarea>
-
+                    <button onClick={handleRegeneratePoem} disabled={loading} className={`w-full p-2 mt-4 rounded ${loading ? "bg-gray-500" : "bg-green-500 hover:bg-green-600"} text-white shadow-md flex items-center justify-center`}>
+                        <FaSpinner className="mr-2" /> {loading ? "Generiert..." : "Neu generieren"}
+                    </button>    
                     {wikiLink && (
                         <a href={wikiLink} target="_blank" rel="noopener noreferrer" className="block text-blue-400 hover:text-blue-500 mt-4 flex items-center">
                             <FaExternalLinkAlt className="mr-2" /> Wikipedia: {city}
@@ -147,7 +224,7 @@ const App = () => {
                                         </button>
                                     </td>
                                     <td className="border p-2">
-                                        <button onClick={() => handleDeleteAddress(address.city)} className="text-red-400 hover:text-red-500">
+                                        <button onClick={() => handleDeleteAddress(address.id)} className="text-red-400 hover:text-red-500">
                                             <FaTrash size={18} />
                                         </button>
                                     </td>

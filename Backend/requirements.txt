@@ -9,3 +9,4 @@ transformers
 accelerate
 huggingface_hub
 sentencepiece
+llama_cpp_python

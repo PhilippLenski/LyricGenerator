@@ -4,12 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import SessionLocal, init_db, Address, Poem
-from model import generate_poem
+from model import generate_poem, switch_model, MODEL_STACK
 
-# FastAPI-Instanz erstellen
+
 app = FastAPI()
-
-# Datenbank initialisieren
 init_db()
 
 app.add_middleware(
@@ -20,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Dependency für die Datenbank-Session
+
 def get_db():
     db = SessionLocal()
     try:
@@ -28,17 +26,17 @@ def get_db():
     finally:
         db.close()
 
-# Pydantic-Modelle für API-Requests
+
 class AddressCreate(BaseModel):
     street: str
     house_number: str
     city: str
     country: str
 
-### 📌 1️⃣ Adresse speichern + Gedicht generieren ###
+
 @app.post("/address/")
 def add_address(data: AddressCreate, db: Session = Depends(get_db)):
-    # Prüfen, ob die Adresse bereits existiert
+
     existing_address = db.query(Address).filter(
         Address.street == data.street,
         Address.house_number == data.house_number,
@@ -49,17 +47,15 @@ def add_address(data: AddressCreate, db: Session = Depends(get_db)):
     if existing_address:
         raise HTTPException(status_code=400, detail="Adresse existiert bereits!")
 
-    # Prüfen, ob für den Wohnort bereits ein Gedicht existiert
     poem = db.query(Poem).filter(Poem.city == data.city).first()
     
     if not poem:
-        poem_text = generate_poem(data.city)  # 🔥 Gedicht generieren
+        poem_text = generate_poem(data.city) 
         poem = Poem(city=data.city, text=poem_text)
         db.add(poem)
         db.commit()
         db.refresh(poem)
 
-    # Adresse speichern
     new_address = Address(
         street=data.street, 
         house_number=data.house_number, 
@@ -76,7 +72,6 @@ def add_address(data: AddressCreate, db: Session = Depends(get_db)):
         "poem": poem.text  
     }
 
-### 📌 2️⃣ Gespeicherte Adressen abrufen ###
 @app.get("/addresses/")
 def get_addresses(db: Session = Depends(get_db)):
     addresses = db.query(Address).all()
@@ -91,7 +86,6 @@ def get_addresses(db: Session = Depends(get_db)):
         for a in addresses
     ]
 
-### 📌 3️⃣ Adresse & Gedicht abrufen ###
 @app.get("/address/{city}")
 def get_address(city: str, db: Session = Depends(get_db)):
     address = db.query(Address).filter(Address.city == city).first()
@@ -108,45 +102,40 @@ def get_address(city: str, db: Session = Depends(get_db)):
         "poem": poem_text
     }
 
-### 📌 4️⃣ Adresse & Gedicht löschen ###
-@app.delete("/address/{city}")
-def delete_address(city: str, db: Session = Depends(get_db)):
-    address = db.query(Address).filter(Address.city == city).first()
+@app.delete("/address/{address_id}")
+def delete_address(address_id: int, db: Session = Depends(get_db)):
+    address = db.query(Address).filter(Address.id == address_id).first()
     if not address:
         raise HTTPException(status_code=404, detail="Adresse nicht gefunden")
-
+    
     db.delete(address)
     db.commit()
-    return {"message": f"Adresse {city} wurde gelöscht"}
+    return {"message": f"Adresse mit ID {address_id} wurde gelöscht"}
 
 @app.put("/address/{city}")
 def update_poem(city: str, db: Session = Depends(get_db)):
-    # 🔹 Prüfen, ob für die Stadt eine Adresse existiert
+
     address = db.query(Address).filter(Address.city == city).first()
     if not address:
         raise HTTPException(status_code=404, detail="Adresse nicht gefunden")
 
-    # 🔹 Prüfen, ob für die Stadt bereits ein Gedicht existiert
     poem = db.query(Poem).filter(Poem.city == city).first()
-    new_poem_text = generate_poem(city)  # 🔥 Neues Gedicht generieren
+    new_poem_text = generate_poem(city)  
 
     if poem:
-        # 🔹 Gedicht aktualisieren
         poem.text = new_poem_text
     else:
-        # 🔹 Falls kein Gedicht existiert, erstelle ein neues
         poem = Poem(city=city, text=new_poem_text)
         db.add(poem)
         db.commit()
         db.refresh(poem)
 
-    # 🔹 Die Adresse mit dem neuen Gedicht verknüpfen
     address.poem_id = poem.id
     db.commit()
 
     return {"city": city, "updated_poem": poem.text}
 
-# 📌 Wikipedia-Link für eine Stadt abrufen
+
 @app.get("/wikipedia/{city}")
 def get_wikipedia_link(city: str):
     url = f"https://de.wikipedia.org/api/rest_v1/page/summary/{city}"
@@ -157,3 +146,17 @@ def get_wikipedia_link(city: str):
         return {"title": data["title"], "link": data["content_urls"]["desktop"]["page"]}
     else:
         return {"error": "Kein Wikipedia-Eintrag gefunden"}
+    
+    
+@app.post("/switch_model/")
+async def switch_model_api(request: dict):
+    model_name = request.get("model_name")
+    if model_name not in ["Gemma3", "Mistral7B"]:
+        raise HTTPException(status_code=400, detail="Ungültiges Modell")
+
+    switch_model(model_name)
+    return {"message": f"Modell gewechselt zu {model_name}"}
+
+@app.get("/models/")
+def get_models(db: Session = Depends(get_db)):
+    return [{"name": a.name,} for a in MODEL_STACK  ]

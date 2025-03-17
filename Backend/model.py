@@ -1,56 +1,99 @@
-import os
-from huggingface_hub import snapshot_download
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from llama_cpp import Llama
 import torch
+import gc
+from typing import NamedTuple
 
-# 📌 Modell und Tokenizer laden
-MODEL_PATH = "/app/models/models-google-gemma-3-4b-it/snapshots/dbd91baf64a0e591f4340ce8b66fd1dba9ab6bd"
+class ModelInfo(NamedTuple):
+    name: str
+    path: str
+
+MODEL_STACK = [
+    ModelInfo("Gemma3 - 7B", "models/gemma-7b.safetensors"),
+    ModelInfo("Gemma3 - 7B - Q5", "/app/models/gemma3-7b-Q5/gemma-7b.Q5_K_M.gguf"),
+    ModelInfo("Mistral 7B Q5", "/app/models/Mistral-7b/Mistral-7B-Instruct-v0.3.Q5_K_M.gguf")
+    ModelInfo("DeepSeekR1 7B Q5", "/app/models/DeepSeek-R1/Distill-Qwen-7B-Q5_K_M/DeepSeek-R1-Distill-Qwen-7B-Q5_K_M.gguf")
+    ]
+
+current_model = None
+current_tokenizer = None
+current_model_name = None
+
+def unload_model():
+    """ Entfernt das aktuelle Modell aus dem Speicher. """
+    global current_model, current_tokenizer, current_model_name
+    if current_model:
+        print(f"🚀 Entlade {current_model_name} ...")
+        del current_model
+        if current_tokenizer:
+            del current_tokenizer
+        current_model = None
+        current_tokenizer = None
+        current_model_name = None
+
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
-if not os.path.exists(MODEL_PATH):
-    print("📥 Modell wird heruntergeladen...")
-    snapshot_download(repo_id="google/gemma-3-4b-it", local_dir=MODEL_PATH)
-else:
-    print("✅ Modell bereits vorhanden.")
+def load_LlamaModel(name:str, model_path:str):
+    global current_model, current_model_name
 
-# **Modell und Tokenizer von Hugging Face laden**
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, device_map="auto", torch_dtype=torch.float16)
+    current_model = Llama(model_path)
+    current_model_name = MODEL_STACK[2].name
 
-def generate_poem(city: str) -> str:
-    """Generiert ein humorvolles Gedicht über eine Stadt mit Gemma 3 4B IT."""
+def load_TransformerModel(name:str,model_path:str):
+    global current_model, current_tokenizer, current_model_name
+
+    current_model = AutoModelForCausalLM.from_pretrained(model_path, torch_dtype=torch.float16, device_map="auto", local_files_only=True)
+    current_tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+    current_model_name = name
+
+def switch_model(model_name):
+    """ Wechselt zwischen Gemma3 und Mistral7B zur Laufzeit. """
+    global current_model_name
+    
+    if model_name == current_model_name:
+        print(f"{model_name} ist bereits aktiv.")
+        return
+
+    unload_model() 
+    
+    if model_name == MODEL_STACK[0].name:                               # Gemma3-7B Transformer
+        load_TransformerModel(MODEL_STACK[0].name,MODEL_STACK[0].path)  
+    elif model_name == MODEL_STACK[1].name:                             # Gemma3-7B-Q5 Llama-cpp-python
+        load_LlamaModel(MODEL_STACK[1].name,MODEL_STACK[1].path)
+    elif model_name == MODEL_STACK[2].name:                             # Mistral-7B-Q5 Llama-cpp-python
+        load_LlamaModel(MODEL_STACK[2].name,MODEL_STACK[2].path)
+    elif model_name == MODEL_STACK[3].name:                             # DeepSeekR1-7B-Q5 Llama-cpp-python
+        load_LlamaModel(MODEL_STACK[3].name,MODEL_STACK[3].path)        
+    else:
+        print("Ungültiges Modell!")
+
+
+def generate_poem(city):
+
     prompt = f"""
-    Schreibe ein humorvolles Gedicht über {city}, das sich auf die lokalen Ess- und Trinkgewohnheiten bezieht.
-    Das Gedicht muss genau eine Strophe mit vier Zeilen enthalten.
-    Verwende das Kreuzreim-Schema (abab).
-    Die Sätze dürfen nicht auf das gleiche Wort enden und müssen sich sinnvoll reimen.
+        Schreibe einen Kreuzreim über die Ess- und Trinkgewohnheiten der Stadt {city}.
+        Der Kreuzreim soll aus 4 Sätzen bestehen.
+        """
+    if current_model_name == MODEL_STACK[0].name:
+        inputs = current_tokenizer(prompt, return_tensors="pt").to("cuda")
+        output = current_model.generate(**inputs, max_length=200)
+        return current_tokenizer.decode(output[0], skip_special_tokens=True)
+    
+    elif current_model_name == MODEL_STACK[1].name:
+        output = current_model(prompt, max_tokens=100, temperature=0.6, top_p=0.9)
+        return output["choices"][0]["text"].strip()
+    
+    elif current_model_name == MODEL_STACK[2].name:
+        output = current_model(prompt, max_tokens=100, temperature=0.6, top_p=0.9)
+        return output["choices"][0]["text"].strip()
+    
+    elif current_model_name == MODEL_STACK[3].name:
+        output = current_model(prompt, max_tokens=100, temperature=0.6, top_p=0.9)
+        return output["choices"][0]["text"].strip()
+    else:
+        return "Kein Modell geladen!"
 
-    Beispiel:
-    **Hamburg**
-    Frischer Fisch vom Hafensteg,
-    ein Astra kühlt die Seele fein.
-    Labskaus liegt mir oft im Magen,
-    doch 'nen Franzbrötchen darf es sein.
 
-    Jetzt schreibe ein Gedicht über {city}:
-    """
-
-    # **Tokenisierung**
-    inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
-
-    # **Generierung**
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_length=100,
-            temperature=0.7,
-            top_k=50,
-            top_p=0.95,
-            repetition_penalty=1.2
-        )
-
-    # **Ergebnis dekodieren**
-    poem = tokenizer.decode(output[0], skip_special_tokens=True)
-
-    # **Nur den relevanten Teil zurückgeben**
-    return poem.split("Jetzt schreibe ein Gedicht über")[-1].strip()
+switch_model(MODEL_STACK[1].name)
