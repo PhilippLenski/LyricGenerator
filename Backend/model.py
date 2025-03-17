@@ -11,7 +11,7 @@ class ModelInfo(NamedTuple):
 MODEL_STACK = [
     ModelInfo("Gemma3 - 7B", "models/gemma-7b.safetensors"),
     ModelInfo("Gemma3 - 7B - Q5", "/app/models/gemma3-7b-Q5/gemma-7b.Q5_K_M.gguf"),
-    ModelInfo("Mistral 7B Q5", "/app/models/Mistral-7b/Mistral-7B-Instruct-v0.3.Q5_K_M.gguf")
+    ModelInfo("Mistral 7B Q5", "/app/models/Mistral-7b/Mistral-7B-Instruct-v0.3.Q5_K_M.gguf"),
     ModelInfo("DeepSeekR1 7B Q5", "/app/models/DeepSeek-R1/Distill-Qwen-7B-Q5_K_M/DeepSeek-R1-Distill-Qwen-7B-Q5_K_M.gguf")
     ]
 
