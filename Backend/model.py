@@ -23,7 +23,7 @@ def unload_model():
     """ Entfernt das aktuelle Modell aus dem Speicher. """
     global current_model, current_tokenizer, current_model_name
     if current_model:
-        print(f"🚀 Entlade {current_model_name} ...")
+        print(f"Entlade {current_model_name} ...")
         del current_model
         if current_tokenizer:
             del current_tokenizer
@@ -39,7 +39,7 @@ def load_LlamaModel(name:str, model_path:str):
     global current_model, current_model_name
 
     current_model = Llama(model_path)
-    current_model_name = MODEL_STACK[2].name
+    current_model_name = name
 
 def load_TransformerModel(name:str,model_path:str):
     global current_model, current_tokenizer, current_model_name
@@ -59,11 +59,14 @@ def switch_model(model_name):
     unload_model() 
     
     if model_name == MODEL_STACK[0].name:                               # Gemma3-7B Transformer
-        load_TransformerModel(MODEL_STACK[0].name,MODEL_STACK[0].path)  
+        load_TransformerModel(MODEL_STACK[0].name,MODEL_STACK[0].path) 
+         
     elif model_name == MODEL_STACK[1].name:                             # Gemma3-7B-Q5 Llama-cpp-python
         load_LlamaModel(MODEL_STACK[1].name,MODEL_STACK[1].path)
+
     elif model_name == MODEL_STACK[2].name:                             # Mistral-7B-Q5 Llama-cpp-python
         load_LlamaModel(MODEL_STACK[2].name,MODEL_STACK[2].path)
+
     elif model_name == MODEL_STACK[3].name:                             # DeepSeekR1-7B-Q5 Llama-cpp-python
         load_LlamaModel(MODEL_STACK[3].name,MODEL_STACK[3].path)        
     else:

@@ -29,7 +29,7 @@ const App = () => {
             const response = await axios.get("http://localhost:8000/models/");
             setModels(response.data);
             if (response.data.length > 0) {
-                setActiveModel(response.data[0].name); 
+                setActiveModel(response.data[1].name); 
             }
         } catch (error) {
             console.error("Fehler beim Abrufen der Modelle!", error);
@@ -42,7 +42,7 @@ const App = () => {
     }, []);
 
     const handleModelSwitch = async (newModel) => {
-        if (model === newModel || switchingModel) return;
+        if (activeModel === newModel || switchingModel) return;
         
         setSwitchingModel(true);
         try {
@@ -151,7 +151,7 @@ const App = () => {
                     <button
                         key={model.name}
                         className={`px-4 py-2 mx-2 rounded-full transition-all duration-300 ${
-                            activeModel === model.name ? "bg-blue-500 text-white" : "bg-gray-300 text-black"
+                            activeModel === model.name ? "bg-green-500 text-white" : "bg-blue-500 text-black  hover:bg-blue-600 "
                         }`}
                         onClick={() => handleModelSwitch(model.name)}
                         disabled={switchingModel}

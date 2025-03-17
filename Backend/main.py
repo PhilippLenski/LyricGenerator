@@ -151,8 +151,11 @@ def get_wikipedia_link(city: str):
 @app.post("/switch_model/")
 async def switch_model_api(request: dict):
     model_name = request.get("model_name")
-    if model_name not in ["Gemma3", "Mistral7B"]:
-        raise HTTPException(status_code=400, detail="Ungültiges Modell")
+
+    matching_model = next((m for m in MODEL_STACK if m.name == model_name), None)
+
+    if not matching_model:
+        raise HTTPException(status_code=400, detail=f"Modell '{model_name}' nicht gefunden!")
 
     switch_model(model_name)
     return {"message": f"Modell gewechselt zu {model_name}"}
