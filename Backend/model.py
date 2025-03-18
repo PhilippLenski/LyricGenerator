@@ -101,7 +101,7 @@ def switch_model(model_name):
         load_TransformerModel(MODEL_STACK[4].name,MODEL_STACK[4].path)
 
     #Wiedervereinigung 7b
-    elif model_name == MODEL_STACK[4].name:
+    elif model_name == MODEL_STACK[5].name:
         load_TransformerModel(MODEL_STACK[4].name,MODEL_STACK[4].path)
 
     else:
