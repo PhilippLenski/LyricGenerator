@@ -31,8 +31,7 @@ Entsprechend der in Docker geladenen Modelle bitte anpassen.
 Die Oberfläche ist unter dem Port 8000 erreichbar
 http://localhost:8000/
 
-![image](https://github.com/user-attachments/assets/0384d00e-6f84-449a-8cc4-cc2dea5bf5fa)
-
+![Screenshot 2025-03-18 101618](https://github.com/user-attachments/assets/15e534e8-7a16-464f-b992-f188d537c6f7)
 
 ## API Keys
 Für die API Calls müssen Keys an den entsprechenden Stellen hinterlegt werden
