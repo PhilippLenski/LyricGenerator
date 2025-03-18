@@ -32,3 +32,26 @@ Die Oberfläche ist unter dem Port 8000 erreichbar
 http://localhost:8000/
 
 ![image](https://github.com/user-attachments/assets/0384d00e-6f84-449a-8cc4-cc2dea5bf5fa)
+
+
+## API Keys
+Für die API Calls müssen Keys an den entsprechenden Stellen hinterlegt werden
+```
+#OpenRouter ->  DeepSeek-R1
+    elif current_model_name == MODEL_STACK[2].name:
+        openRouterClient = openai.OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key="API_KEY",
+            )
+        
+        completion = openRouterClient.chat.completions.create(
+            model="deepseek/deepseek-r1:free",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"{prompt}"
+                }
+            ] 
+         )
+        return(completion.choices[0].message.content)
+```
