@@ -8,6 +8,7 @@ RUN python -m venv /app/venv
 # Dependencies installieren (wird gecached)
 COPY requirements.txt .
 RUN /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN /app/venv/bin/pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 
 COPY . .
 

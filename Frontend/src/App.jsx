@@ -29,7 +29,7 @@ const App = () => {
             const response = await axios.get("http://localhost:8000/models/");
             setModels(response.data);
             if (response.data.length > 0) {
-                setActiveModel(response.data[1].name); 
+                setActiveModel(response.data[0].name); 
             }
         } catch (error) {
             console.error("Fehler beim Abrufen der Modelle!", error);
@@ -47,7 +47,7 @@ const App = () => {
         setSwitchingModel(true);
         try {
             await axios.post("http://localhost:8000/switch_model/", { model_name: newModel });
-            setModel(newModel);
+            setActiveModel(newModel);
         } catch (error) {
             console.error("Fehler beim Wechseln des Modells!", error);
         } finally {
